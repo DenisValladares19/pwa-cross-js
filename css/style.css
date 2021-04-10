@@ -240,6 +240,15 @@ legend {
   }
 }
 
+@media screen and (max-width: 420px) {
+  body > div.container > div > h1 > div:nth-child(1) > img {
+    height: 40px;
+  }
+  .titulo {
+    font-size: 30px;
+  }
+}
+
 @media screen and (max-width: 400px) {
   .card {
     width: 87%;

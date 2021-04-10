@@ -1,0 +1,248 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+.container {
+  min-width: 100%;
+  min-height: 100vh;
+  background-color: #202020;
+  color: #fff;
+  transition: all 0.5s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.copyright {
+  padding: 10px 0;
+}
+
+.card {
+  width: 50%;
+  height: 75%;
+  min-width: 310px;
+  min-height: 500px;
+  margin: auto 0;
+  padding: 50px;
+  background-color: #2c2c2c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 40px;
+  transition: all 0.5s ease-in-out;
+}
+
+.titulo {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  transition: all 0.5s ease-in-out;
+  justify-content: space-between;
+}
+
+.agregar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  transition: all 0.5s ease-in-out;
+}
+
+input[type="range"] {
+  width: 100%;
+  transition: all 0.5s ease-in-out;
+}
+
+audio {
+  width: 100%;
+  transition: all 0.5s ease-in-out;
+}
+
+fieldset {
+  border: 2px solid #fff;
+  border-radius: 12px;
+  transition: all 0.5s ease-in-out;
+}
+
+legend {
+  font-size: 20px;
+  transition: all 0.5s ease-in-out;
+}
+
+.icon-eq {
+  height: 30px;
+  border-radius: 2px;
+}
+
+.iconEq {
+  background-color: black;
+  padding: 5px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-right: 30px;
+}
+
+.modal-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.27);
+  transition: all 0.3s ease-in-out;
+  display: none;
+}
+
+.modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  min-height: 520px;
+  background: #fff;
+  border-radius: 25px;
+  box-sizing: border-box;
+  transition: width 0.4s ease-in-out;
+}
+
+.content {
+  width: 100%;
+  height: 500px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 25px;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-weight: bold;
+  font-size: 20px;
+  padding: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.title-modal {
+  text-align: center;
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+.contenido {
+  display: flex;
+  width: 90%;
+  margin-top: 30px;
+  padding: 0 10px;
+  overflow-x: scroll;
+  overflow-y: hidden;
+}
+
+.contenido::-webkit-scrollbar {
+  width: 9px;
+}
+
+.contenido::-webkit-scrollbar-track {
+  background: transparent;
+  margin-top: 15px;
+  margin-bottom: 32px;
+}
+
+.contenido::-webkit-scrollbar-thumb {
+  background: #c4c4c4;
+  border-radius: 6.5px;
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  width: 40px;
+  height: 350px;
+  margin: 0 15px;
+}
+
+.range-vertical {
+  -webkit-appearance: none;
+  height: 280px;
+  border-radius: 5px;
+  background: #ccc;
+  outline: none;
+  writing-mode: bt-lr; /* IE */
+  -webkit-appearance: slider-vertical; /* WebKit */
+}
+
+.cerrar,
+.reset {
+  text-transform: uppercase;
+  width: 150px;
+  height: 35px;
+  margin: 5px;
+  border-radius: 20px;
+  background-color: black;
+  color: white;
+  font-weight: bold;
+  border: 1px solid black;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.reset {
+  color: black;
+  background-color: white;
+  border: 1px solid black;
+  font-weight: bold;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  justify-content: center;
+}
+
+@media screen and (max-width: 730px) {
+  .card {
+    width: 65%;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .card {
+    width: 75%;
+    padding: 50px 30px;
+  }
+
+  .modal {
+    width: 95%;
+    min-width: 300px;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .card {
+    width: 87%;
+    padding: 15px;
+  }
+}

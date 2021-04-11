@@ -6,6 +6,8 @@ const assets = [
   "/js/main.js",
   "/img/icon.ico",
   "/img/icon.svg",
+  "/img/icon.png",
+  "/img/iconEQ.png",
 ];
 
 self.addEventListener("install", installEvent => {

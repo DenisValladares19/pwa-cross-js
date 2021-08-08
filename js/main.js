@@ -1,21 +1,71 @@
-window.onload = function () { 
-    window.frecuencias =  [
-        { frecuencia: 32, vol: 0 },
-        { frecuencia: 63, vol: 0 },
-        { frecuencia: 125, vol: 0 },
-        { frecuencia: 250, vol: 0 },
-        { frecuencia: 500, vol: 0 },
-        { frecuencia: 1000, vol: 0 },
-        { frecuencia: 2000, vol: 0 },
-        { frecuencia: 4000, vol: 0 },
-        { frecuencia: 8000, vol: 0 },
-        { frecuencia: 16000, vol: 0 }
-    ];
+let frecuencias = [
+    { frecuencia: 32, vol: 0 },
+    { frecuencia: 63, vol: 0 },
+    { frecuencia: 125, vol: 0 },
+    { frecuencia: 250, vol: 0 },
+    { frecuencia: 500, vol: 0 },
+    { frecuencia: 1000, vol: 0 },
+    { frecuencia: 2000, vol: 0 },
+    { frecuencia: 4000, vol: 0 },
+    { frecuencia: 8000, vol: 0 },
+    { frecuencia: 16000, vol: 0 }
+];
+window.frecuencias = frecuencias.map(item => {
+    let oldObj = { ...item };
+    let local = localStorage.getItem(`vol-frecuencia-${oldObj.frecuencia}`);
+    if (local === null || local === '') {
+        localStorage.setItem(`vol-frecuencia-${oldObj.frecuencia}`, oldObj.vol);
+    } else {
+        oldObj.vol = local;
+    }
+    return oldObj;
+})
+
+
+/**
+ * Funcion para quitar o mostrar decimales de un 
+ * numero pasado por parametros 
+ * @param {Number} number 
+ * @param {Number} numDecimal numero de decimales que desea mostrar 
+ * @returns Number
+ */
+const deleteDecimal = (number, numDecimal = 0) => {
+    if (number % 1 == 0) {
+        return Number(number);
+    } else {
+        return Number(number).toFixed(numDecimal);
+    }
 }
 
-window.addEventListener('beforeunload', (e) => {
-    localStorage.setItem('lista-frecuencias', JSON.stringify(window.frecuencias));
-});
+
+
+/**
+ * Funcion que crea las barras de cada frecuencia 
+ * definida en el array anterior 
+ */
+let createBarraBand = () => {
+    let contenedorFrecuencias = document.querySelector(".contenido");
+    let html = ``;
+    window.frecuencias.forEach((item, i) => {
+        html += `
+        <div class="bar">
+            <span style="text-align: center; width: 80px; position: relative;left: -13px;" id="span-vol-${i + 1}">Vol: ${deleteDecimal(item.vol, 2)}</span>
+            <input 
+                type="range" 
+                min="-10" 
+                max="10" 
+                step="0.00001" 
+                class="range-vertical"
+                value=${item.vol}
+                id="band-${i + 1}"
+            >
+            <span>${item.frecuencia}Hz</span>
+          </div>
+    `;
+    });
+    contenedorFrecuencias.innerHTML = html;
+}
+
 
 setTimeout(() => {
     const audioELement = document.querySelector('audio');
@@ -37,44 +87,10 @@ setTimeout(() => {
     const open = document.querySelector('.iconEq');
     const btnCerrar = document.querySelector('#btn-cerrar');
     const btnReset = document.querySelector('#btn-reset');
-    // funcion para quitar decimales 
-    const deleteDecimal = (number, numDecimal = 0) => {
-        if (number % 1 == 0) {
-            return Number(number);
-        } else {
-            return Number(number).toFixed(numDecimal);
-        }
-    }
 
     // creamos la variable para guardar cada banda del ecualizador 
     window.bands = [];
 
-    /**
-     * Funcion que crea las barras de cada frecuencia 
-     * definida en el array anterior 
-     */
-    let createBarraBand = () => {
-        let contenedorFrecuencias = document.querySelector(".contenido");
-        let html = ``;
-        frecuencias.forEach((item, i) => {
-            html += `
-            <div class="bar">
-                <span style="text-align: center; width: 80px; position: relative;left: -13px;" id="span-vol-${i + 1}">Vol: ${deleteDecimal(item.vol, 2)}</span>
-                <input 
-                    type="range" 
-                    min="-30" 
-                    max="30" 
-                    step="0.00001" 
-                    class="range-vertical"
-                    value=${item.vol}
-                    id="band-${i + 1}"
-                >
-                <span>${item.frecuencia}Hz</span>
-              </div>
-        `;
-        });
-        contenedorFrecuencias.innerHTML = html;
-    }
     createBarraBand();
 
     // frecuencias bajas 
@@ -123,7 +139,7 @@ setTimeout(() => {
     });
 
     // cerrar el modal desde la "X"
-    close.addEventListener('click', (e) => { 
+    close.addEventListener('click', (e) => {
         modal.style.display = 'none';
     });
 
@@ -193,13 +209,14 @@ setTimeout(() => {
     // controlando los inputs del ecualizador 
     window.frecuencias.map((item, index) => {
         document.getElementById(`band-${index + 1}`)
-        .addEventListener('change', function(e) {
-            let old = [... window.frecuencias];
-            old[index].vol = e.target.value;
-            window.frecuencias = [...old];
-            document.getElementById(`span-vol-${index + 1}`).innerText = `Vol: ${deleteDecimal(frecuencias[index].vol, 2)}`;
-            window.bands[index] ? window.bands[index].gain.value = e.target.value : null;
-        });
+            .addEventListener('change', function (e) {
+                let old = [...window.frecuencias];
+                old[index].vol = e.target.value;
+                window.frecuencias = [...old];
+                document.getElementById(`span-vol-${index + 1}`).innerText = `Vol: ${deleteDecimal(window.frecuencias[index].vol, 2)}`;
+                window.bands[index] ? window.bands[index].gain.value = e.target.value : null;
+                localStorage.setItem(`vol-frecuencia-${item.frecuencia}`, e.target.value);
+            });
     })
 
 
@@ -244,14 +261,15 @@ setTimeout(() => {
 
         gainLow.connect(lowPassFilter);
         gainHight.connect(hightPassFilter);
-       
-        for (i = 1; i < 10; i ++) {
-            window.bands[i-1].connect(window.bands[i]);
+
+        for (i = 1; i < 10; i++) {
+            window.bands[i - 1].connect(window.bands[i]);
         }
 
         mediaElement.connect(window.bands[0]);
         // asignando los filtros a cada canal 
-        window.bands[9].connect(spliter);
+        window.bands[9].connect(splitter);
+
         spliter.connect(gainLow, 0);
         spliter.connect(gainHight, 1);
 
@@ -259,10 +277,7 @@ setTimeout(() => {
         hightPassFilter.connect(merger, 0, 1);
 
         merger.connect(ctx.destination);
-        
     });
-
-
 }, 1000);
 
 if ("serviceWorker" in navigator) {

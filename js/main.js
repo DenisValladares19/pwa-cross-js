@@ -268,7 +268,7 @@ setTimeout(() => {
 
         mediaElement.connect(window.bands[0]);
         // asignando los filtros a cada canal 
-        window.bands[9].connect(splitter);
+        window.bands[9].connect(spliter);
 
         spliter.connect(gainLow, 0);
         spliter.connect(gainHight, 1);

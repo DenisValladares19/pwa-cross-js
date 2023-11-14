@@ -359,7 +359,7 @@ setTimeout(() => {
     gainHight = ctx.createGain();
     window.gainHight.gain.value = window.gananciaAlta;
     // separar los canales
-    let spliter = ctx.createChannelSplitter(2);
+    let splitter = ctx.createChannelSplitter(2);
 
     // unir los canales
     let merger = ctx.createChannelMerger(2);

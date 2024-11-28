@@ -1,14 +1,35 @@
 let frecuencias = [
-  { frecuencia: 32, vol: 0 },
+  { frecuencia: 20, vol: 0 },
+  { frecuencia: 25, vol: 0 },
+  { frecuencia: 31.5, vol: 0 },
+  { frecuencia: 40, vol: 0 },
+  { frecuencia: 50, vol: 0 },
   { frecuencia: 63, vol: 0 },
+  { frecuencia: 80, vol: 0 },
+  { frecuencia: 100, vol: 0 },
   { frecuencia: 125, vol: 0 },
+  { frecuencia: 160, vol: 0 },
+  { frecuencia: 200, vol: 0 },
   { frecuencia: 250, vol: 0 },
+  { frecuencia: 315, vol: 0 },
+  { frecuencia: 400, vol: 0 },
   { frecuencia: 500, vol: 0 },
+  { frecuencia: 630, vol: 0 },
+  { frecuencia: 800, vol: 0 },
   { frecuencia: 1000, vol: 0 },
+  { frecuencia: 1250, vol: 0 },
+  { frecuencia: 1600, vol: 0 },
   { frecuencia: 2000, vol: 0 },
+  { frecuencia: 2500, vol: 0 },
+  { frecuencia: 3150, vol: 0 },
   { frecuencia: 4000, vol: 0 },
+  { frecuencia: 5000, vol: 0 },
+  { frecuencia: 6300, vol: 0 },
   { frecuencia: 8000, vol: 0 },
+  { frecuencia: 10000, vol: 0 },
+  { frecuencia: 12500, vol: 0 },
   { frecuencia: 16000, vol: 0 },
+  { frecuencia: 20000, vol: 0 },
 ];
 
 window.frecuencias = frecuencias.map((item) => {
@@ -55,14 +76,14 @@ let createBarraBand = () => {
             }">Vol: ${deleteDecimal(item.vol, 2)}</span>
             <input 
                 type="range" 
-                min="-10" 
-                max="10" 
+                min="-12" 
+                max="12" 
                 step="0.00001" 
                 class="range-vertical"
                 value=${item.vol}
                 id="band-${i + 1}"
             >
-            <span>${item.frecuencia}Hz</span>
+            <span style="font-size: 12px;">${item.frecuencia}Hz</span>
           </div>
     `;
   });
@@ -339,18 +360,20 @@ setTimeout(() => {
       window.bands[index] = ctx.createBiquadFilter();
       window.bands[index].type = "peaking"; // 5 || 'peaking'
       window.bands[index].frequency.value = item.frecuencia;
-      window.bands[index].Q.value = 1.4;
+      window.bands[index].Q.value = 4.3;
       window.bands[index].gain.value = item.vol;
     });
 
     // filtro pasa bajo
     lowPassFilter = ctx.createBiquadFilter();
     lowPassFilter.frequency.value = window.frecuenciaBaja;
+    lowPassFilter.Q.value = Math.SQRT1_2;
 
     // filtro pasa alto
     hightPassFilter = ctx.createBiquadFilter();
     hightPassFilter.type = "highpass";
     hightPassFilter.frequency.value = window.frecuenciaAlta;
+    hightPassFilter.Q.value = Math.SQRT1_2;
 
     // ganacia por canal
     gainLow = ctx.createGain();
@@ -388,12 +411,12 @@ setTimeout(() => {
     mediaElement.connect(splitterRight);
 
     // uniendo los dos canales L y R en uno solo que sera R
-    splitterRight.connect(mergeRight, 1, 1);
+    splitterRight.connect(mergeRight, 0, 1);
     splitterRight.connect(mergeRight, 0, 1);
 
     // uniendo los dos canales L y R en uno solo que sera L
     splitterLeft.connect(mergeLeft, 1, 0);
-    splitterLeft.connect(mergeLeft, 0, 0);
+    splitterLeft.connect(mergeLeft, 1, 0);
 
     // Uniendo los canales L y R antes modificados y
     // dando un canal cada uno final
@@ -410,9 +433,33 @@ setTimeout(() => {
     lowPassFilter.connect(merger, 0, 0);
     hightPassFilter.connect(merger, 0, 1);
 
-    merger.connect(ctx.destination);
+    let lowCutFilter = Array(2)
+      .fill()
+      .map(() => {
+        const lowCut = ctx.createBiquadFilter();
+        lowCut.type = "highpass";
+        lowCut.frequency.value = getLowCut();
+        lowCut.Q.value = 0.707;
+        return lowCut;
+      });
+
+    merger.connect(lowCutFilter[0]);
+    lowCutFilter.forEach((filter, index) => {
+      if (index < lowCutFilter.length - 1) {
+        filter.connect(lowCutFilter[index + 1]);
+      }
+    });
+    lowCutFilter[lowCutFilter.length - 1].connect(ctx.destination);
   });
 }, 1000);
+
+function getLowCut() {
+  const lowCut = localStorage.getItem("lowCutFrequency");
+  if (isNaN(Number(lowCut))) {
+    return 30;
+  }
+  return Number(lowCut);
+}
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {

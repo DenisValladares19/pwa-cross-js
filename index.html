@@ -1,95 +1,134 @@
 <!DOCTYPE html>
 <html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="./img/icon.ico" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <title>Cross Js</title>
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="./img/icon.ico" />
-  <link rel="stylesheet" href="./css/style.css" />
-  <link rel="manifest" href="manifest.json">
-  <title>Cross Js</title>
-</head>
-
-<body>
-  <div class="container">
-    <div class="card">
-      <h1 class="titulo">
-        <div>
-          <img src="./img/icon.png" alt="" style="margin-right: 7px; position: relative; bottom: -7px;" /> CROSS JS
-        </div>
-        <div class="iconEq">
-          <img src="./img/iconEQ.png" class="icon-eq" alt="">
-        </div>
-      </h1>
-      <div class="agregar">
-        <br />
-        <fieldset>
-          <legend align="center" style="padding: 0 10px">
-            Bajas Frecuencias
-          </legend>
-          <div style="padding: 15px">
-            <label for="frecuenciaBaja">Frecuencia de corte (<span id="verFrecuenciaBaja"></span>
-              Hz)</label>
-            <input type="range" min="20" max="1000" step="0.00000000001" id="frecuenciaBaja" />
-            <label for="gananciaBaja">Ganancia (<span id="verGananciaBaja"></span> db)</label>
-            <input type="range" min="0" max="2" step="0.00001" id="gananciaBaja" />
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1 class="titulo">
+          <div>
+            <img
+              src="./img/icon.png"
+              alt=""
+              style="margin-right: 7px; position: relative; bottom: -7px"
+            />
+            CROSS JS
           </div>
-        </fieldset>
-
-        <br />
-        <fieldset>
-          <legend align="center" style="padding: 0 10px">
-            Altas Frecuencias
-          </legend>
-          <div style="padding: 15px">
-            <label for="frecuenciaAlta">Frecuencia de corte (<span id="verFrecuenciaAlta"></span>
-              Hz)</label>
-            <input type="range" min="50" max="2000" step="0.00000000001" id="frecuenciaAlta" />
-            <label for="gananciaAlta">Ganancia (<span id="verGananciaAlta"></span> db)</label>
-            <input type="range" min="0" max="2" step="0.00001" id="gananciaAlta" />
+          <div class="iconEq">
+            <img src="./img/iconEQ.png" class="icon-eq" alt="" />
           </div>
-        </fieldset>
+        </h1>
+        <div class="agregar">
+          <br />
+          <fieldset>
+            <legend align="center" style="padding: 0 10px">
+              Bajas Frecuencias
+            </legend>
+            <div style="padding: 15px">
+              <label for="frecuenciaBaja"
+                >Frecuencia de corte (<span id="verFrecuenciaBaja"></span>
+                Hz)</label
+              >
+              <input
+                type="range"
+                min="20"
+                max="1000"
+                step="0.00000000001"
+                id="frecuenciaBaja"
+              />
+              <label for="gananciaBaja"
+                >Ganancia (<span id="verGananciaBaja"></span> db)</label
+              >
+              <input
+                type="range"
+                min="0"
+                max="2"
+                step="0.00001"
+                id="gananciaBaja"
+              />
+            </div>
+          </fieldset>
 
-        <br />
-        <fieldset>
-          <legend align="center" style="padding: 0 10px">
-            Listado de canciones
-          </legend>
-          <div style="padding: 15px; padding-right: 30px;" id="container-songs">
+          <br />
+          <fieldset>
+            <legend align="center" style="padding: 0 10px">
+              Altas Frecuencias
+            </legend>
+            <div style="padding: 15px">
+              <label for="frecuenciaAlta"
+                >Frecuencia de corte (<span id="verFrecuenciaAlta"></span>
+                Hz)</label
+              >
+              <input
+                type="range"
+                min="50"
+                max="1000"
+                step="0.00000000001"
+                id="frecuenciaAlta"
+              />
+              <label for="gananciaAlta"
+                >Ganancia (<span id="verGananciaAlta"></span> db)</label
+              >
+              <input
+                type="range"
+                min="0"
+                max="2"
+                step="0.00001"
+                id="gananciaAlta"
+              />
+            </div>
+          </fieldset>
 
-          </div>
-        </fieldset>
-        <br />
-        <div class="container-add" id="btn-add">
-          Seleccionar canciones
+          <br />
+          <fieldset>
+            <legend align="center" style="padding: 0 10px">
+              Listado de canciones
+            </legend>
+            <div
+              style="padding: 15px; padding-right: 30px"
+              id="container-songs"
+            ></div>
+          </fieldset>
+          <br />
+          <div class="container-add" id="btn-add">Seleccionar canciones</div>
+
+          <div class="list-songs"></div>
+          <input
+            type="file"
+            hidden
+            accept="audio/mp3,audio/*"
+            id="musica"
+            aria-label="Seleccione una canción"
+            multiple
+          />
         </div>
-
-        <div class="list-songs"></div>
-        <input type="file" hidden accept="audio/mp3,audio/*" id="musica" aria-label="Seleccione una canción" multiple />
+        <audio controls></audio>
       </div>
-      <audio controls></audio>
-    </div>
 
-    <h3 class="copyright"></h3>
-  </div>
-  <!-- START CUSTOM MODAL -->
-  <div class="modal-container">
-    <div class="modal">
-      <div class="content">
-        <div class="close">
-          X
-        </div>
-        <h1 class="title-modal">ECUALIZADOR</h1>
-        <div class="contenido"></div>
-        <div class="button-group">
-          <button class="reset" id="btn-reset">reset</button>
-          <button class="cerrar" id="btn-cerrar">Cerrar</button>
+      <h3 class="copyright"></h3>
+    </div>
+    <!-- START CUSTOM MODAL -->
+    <div class="modal-container">
+      <div class="modal">
+        <div class="content">
+          <div class="close">X</div>
+          <h1 class="title-modal">ECUALIZADOR</h1>
+          <div class="contenido"></div>
+          <div class="button-group">
+            <button class="reset" id="btn-reset">reset</button>
+            <button class="cerrar" id="btn-cerrar">Cerrar</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <!-- END CUSTOM MODAL -->
-  <script src="./js/main.js"></script>
-</body>
-
+    <!-- END CUSTOM MODAL -->
+    <script src="./js/main.js"></script>
+  </body>
 </html>

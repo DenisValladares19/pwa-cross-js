@@ -118,7 +118,8 @@ legend {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 500px;
+  width: calc(100vw - 30px);
+
   min-height: 520px;
   background: #fff;
   border-radius: 25px;
@@ -154,7 +155,7 @@ legend {
 
 .contenido {
   display: flex;
-  width: 90%;
+  width: calc(100% - 30px);
   margin-top: 30px;
   padding: 0 10px;
   overflow-x: scroll;
@@ -252,12 +253,12 @@ legend {
 
 .delete-item {
   position: absolute;
-    right: -25px;
-    top: -4px;
-    color: red;
-    font-size: 16px;
-    font-weight: 700;
-    padding: 5px;
+  right: -25px;
+  top: -4px;
+  color: red;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 5px;
 }
 
 @media screen and (max-width: 730px) {

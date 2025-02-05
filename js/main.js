@@ -32,6 +32,44 @@ let frecuencias = [
   { frecuencia: 20000, vol: 0 },
 ];
 
+// Función para crear filtros LR o Butterworth parametrizables
+function createFilter({
+  type = "highpass", // "highpass" o "lowpass"
+  frequency = 1000, // Frecuencia de corte (Hz)
+  slope = 24, // Pendiente (24, 48 dB/octava)
+  filterType = "LR", // "LR" (Linkwitz-Riley) o "butterworth",
+  ctx,
+}) {
+  const stages = slope / 12; // Etapas necesarias (2 para 24 dB, 4 para 48 dB)
+  const filters = [];
+
+  // Configurar Q según el tipo de filtro
+  const Q = filterType === "LR" ? 0.5 : 0.7071; // Q para LR o Butterworth
+
+  // Crear y configurar cada etapa
+  for (let i = 0; i < stages; i++) {
+    const filter = ctx.createBiquadFilter();
+    filter.type = type;
+    filter.frequency.value = frequency;
+    filter.Q.value = Q;
+    filters.push(filter);
+  }
+
+  // Conectar en serie
+  filters.reduce((prev, curr) => prev.connect(curr));
+
+  return {
+    input: filters[0],
+    output: filters[filters.length - 1],
+    filters: filters, // Opcional: acceso a cada etapa
+  };
+}
+
+// Create filters
+let hightFilter;
+
+let lowFilter;
+
 window.frecuencias = frecuencias.map((item) => {
   let oldObj = { ...item };
   let local = localStorage.getItem(`vol-frecuencia-${oldObj.frecuencia}`);
@@ -284,7 +322,10 @@ setTimeout(() => {
       window.frecuenciaBaja = e.target.value;
       localStorage.setItem("frecuenciaBaja", window.frecuenciaBaja);
       mostrarFrecuenciaBaja.innerText = deleteDecimal(window.frecuenciaBaja);
-      window.lowPassFilter.frequency.value = window.frecuenciaBaja;
+      // window.lowPassFilter.frequency.value = window.frecuenciaBaja;
+      lowFilter?.filters?.forEach(
+        (filter) => (filter.frequency.value = window.frecuenciaBaja)
+      );
     } catch (error) {
       console.log(error);
     }
@@ -295,7 +336,10 @@ setTimeout(() => {
       window.frecuenciaAlta = e.target.value;
       localStorage.setItem("frecuenciaAlta", window.frecuenciaAlta);
       mostrarFrecuenciaAlta.innerText = deleteDecimal(window.frecuenciaAlta);
-      window.hightPassFilter.frequency.value = window.frecuenciaAlta;
+      // window.hightPassFilter.frequency.value = window.frecuenciaAlta;
+      hightFilter?.filters?.forEach(
+        (filter) => (filter.frequency.value = window.frecuenciaAlta)
+      );
     } catch (error) {
       console.log(error);
     }
@@ -365,15 +409,29 @@ setTimeout(() => {
     });
 
     // filtro pasa bajo
-    lowPassFilter = ctx.createBiquadFilter();
-    lowPassFilter.frequency.value = window.frecuenciaBaja;
-    lowPassFilter.Q.value = Math.SQRT1_2;
+    lowFilter = createFilter({
+      ctx,
+      filterType: "LR",
+      frequency: frecuenciaBaja,
+      slope: 24,
+      type: "lowpass",
+    });
+    // lowPassFilter = ctx.createBiquadFilter();
+    // lowPassFilter.frequency.value = window.frecuenciaBaja;
+    // lowPassFilter.Q.value = Math.SQRT1_2;
 
     // filtro pasa alto
-    hightPassFilter = ctx.createBiquadFilter();
-    hightPassFilter.type = "highpass";
-    hightPassFilter.frequency.value = window.frecuenciaAlta;
-    hightPassFilter.Q.value = Math.SQRT1_2;
+    hightFilter = createFilter({
+      ctx,
+      filterType: "LR",
+      frequency: frecuenciaAlta,
+      slope: 24,
+      type: "highpass",
+    });
+    // hightPassFilter = ctx.createBiquadFilter();
+    // hightPassFilter.type = "highpass";
+    // hightPassFilter.frequency.value = window.frecuenciaAlta;
+    // hightPassFilter.Q.value = Math.SQRT1_2;
 
     // ganacia por canal
     gainLow = ctx.createGain();
@@ -387,10 +445,10 @@ setTimeout(() => {
     // unir los canales
     let merger = ctx.createChannelMerger(2);
 
-    gainLow.connect(lowPassFilter);
-    gainHight.connect(hightPassFilter);
+    gainLow.connect(lowFilter.input);
+    gainHight.connect(hightFilter.input);
 
-    for (i = 1; i < 10; i++) {
+    for (i = 1; i < frecuencias.length; i++) {
       window.bands[i - 1].connect(window.bands[i]);
     }
 
@@ -425,21 +483,21 @@ setTimeout(() => {
 
     merge.connect(window.bands[0]);
     // asignando los filtros a cada canal
-    window.bands[9].connect(splitter);
+    window.bands[frecuencias.length - 1].connect(splitter);
 
     splitter.connect(gainLow, 0);
     splitter.connect(gainHight, 1);
 
-    lowPassFilter.connect(merger, 0, 0);
-    hightPassFilter.connect(merger, 0, 1);
+    lowFilter.output.connect(merger, 0, 0);
+    hightFilter.output.connect(merger, 0, 1);
 
-    let lowCutFilter = Array(2)
+    let lowCutFilter = Array(4)
       .fill()
       .map(() => {
         const lowCut = ctx.createBiquadFilter();
         lowCut.type = "highpass";
         lowCut.frequency.value = getLowCut();
-        lowCut.Q.value = 0.707;
+        lowCut.Q.value = 0.5;
         return lowCut;
       });
 

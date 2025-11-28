@@ -13,9 +13,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Instala Firebase CLI globalmente (esto evita que la acción intente usar npx)
       - name: Install Firebase CLI
         run: curl -sL https://firebase.tools | bash
 
+      - name: Create service account file
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > serviceAccount.json
+
+      - name: Set GOOGLE_APPLICATION_CREDENTIALS
+        run: echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/serviceAccount.json" >> $GITHUB_ENV
+
       - name: Deploy to Firebase Hosting
-        run: firebase deploy --only hosting --project cross-js --token "${{ secrets.FIREBASE_SERVICE_ACCOUNT_CROSS_JS }}"
+        run: firebase deploy --only hosting --project cross-js

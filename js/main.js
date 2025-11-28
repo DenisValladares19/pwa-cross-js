@@ -425,7 +425,7 @@ setTimeout(() => {
       ctx,
       filterType: "LR",
       frequency: frecuenciaAlta,
-      slope: 24,
+      slope: 48,
       type: "highpass",
     });
     // hightPassFilter = ctx.createBiquadFilter();
@@ -445,8 +445,29 @@ setTimeout(() => {
     // unir los canales
     let merger = ctx.createChannelMerger(2);
 
+    now = ctx.currentTime;
+    lowCompressor = ctx.createDynamicsCompressor();
+    hightCompressor = ctx.createDynamicsCompressor();
+
+    // confiure low dynamic compressor
+    lowCompressor.threshold.setValueAtTime(-12, now); // Umbral bajo (la compresión se activa fácilmente)
+    lowCompressor.ratio.setValueAtTime(6, now); // Ratio alto (comprime fuertemente)
+    lowCompressor.attack.setValueAtTime(0.01, now); // Ataque rápido (10ms) -> Para apretar el kick
+    lowCompressor.release.setValueAtTime(0.08, now); // Liberación media-rápida (80ms)
+    lowCompressor.knee.setValueAtTime(10, now); // Rodilla más dura para un efecto más notorio
+
+    // configure high dynamic compressor
+    hightCompressor.threshold.setValueAtTime(-4, now); // Umbral más alto (solo actúa en picos fuertes)
+    hightCompressor.ratio.setValueAtTime(2.5, now); // Ratio bajo (compresión suave para mantener la dinámica)
+    hightCompressor.attack.setValueAtTime(0.05, now); // Ataque moderado (50ms) -> Permite pasar los transitorios para mantener el brillo
+    hightCompressor.release.setValueAtTime(0.35, now); // Liberación lenta (350ms) -> Evita el "bombeo" audible
+    hightCompressor.knee.setValueAtTime(30, now); // Rodilla suave (más musical)
+
     gainLow.connect(lowFilter.input);
     gainHight.connect(hightFilter.input);
+
+    lowCompressor.connect(gainLow);
+    hightCompressor.connect(gainHight);
 
     for (i = 1; i < frecuencias.length; i++) {
       window.bands[i - 1].connect(window.bands[i]);
@@ -485,8 +506,8 @@ setTimeout(() => {
     // asignando los filtros a cada canal
     window.bands[frecuencias.length - 1].connect(splitter);
 
-    splitter.connect(gainLow, 0);
-    splitter.connect(gainHight, 1);
+    splitter.connect(lowCompressor, 0);
+    splitter.connect(hightCompressor, 1);
 
     lowFilter.output.connect(merger, 0, 0);
     hightFilter.output.connect(merger, 0, 1);

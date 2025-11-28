@@ -16,12 +16,7 @@ jobs:
       - name: Install Firebase CLI
         run: curl -sL https://firebase.tools | bash
 
-      - name: Create service account file
-        run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > serviceAccount.json
-
-      - name: Set GOOGLE_APPLICATION_CREDENTIALS
-        run: echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/serviceAccount.json" >> $GITHUB_ENV
-
       - name: Deploy to Firebase Hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: firebase deploy --only hosting --project cross-js

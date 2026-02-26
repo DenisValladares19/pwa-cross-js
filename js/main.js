@@ -56,7 +56,7 @@ function createBBELowNode(ctx, inputNode, options = {}) {
   // Extra Bass Boost para tono más profundo
   const bassBoostFilter = ctx.createBiquadFilter();
   bassBoostFilter.type = "lowpass";
-  bassBoostFilter.frequency.value = 60; // Hz para profundidad sub
+  bassBoostFilter.frequency.value = 50; // Hz para profundidad sub
   bassBoostFilter.Q.value = 0.707;
 
   const bassBoostGainNode = ctx.createGain();

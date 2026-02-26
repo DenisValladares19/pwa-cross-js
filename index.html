@@ -59,6 +59,56 @@
           <br />
           <fieldset>
             <legend align="center" style="padding: 0 10px">
+              BBE Sonic Maximizer
+            </legend>
+            <div style="padding: 15px">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label>Bajos (Low & Bass Boost)</label>
+                <input type="checkbox" id="enableBBELow" checked>
+              </div>
+              <label for="bbeLowContour"
+                >Low Contour (<span id="verBbeLowContour"></span> dB)</label
+              >
+              <input
+                type="range"
+                min="0"
+                max="12"
+                step="0.1"
+                id="bbeLowContour"
+              />
+              <label for="bbeBassBoost"
+                >Bass Boost (<span id="verBbeBassBoost"></span> dB)</label
+              >
+              <input
+                type="range"
+                min="0"
+                max="12"
+                step="0.1"
+                id="bbeBassBoost"
+              />
+
+              <hr style="margin: 15px 0; border: 0; border-top: 1px solid #555;">
+
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label>Proceso (Process)</label>
+                <input type="checkbox" id="enableBBEProcess" checked>
+              </div>
+              <label for="bbeProcess"
+                >Process (<span id="verBbeProcess"></span> dB)</label
+              >
+              <input
+                type="range"
+                min="0"
+                max="12"
+                step="0.1"
+                id="bbeProcess"
+              />
+            </div>
+          </fieldset>
+
+          <br />
+          <fieldset>
+            <legend align="center" style="padding: 0 10px">
               Altas Frecuencias
             </legend>
             <div style="padding: 15px">

@@ -32,6 +32,98 @@ let frecuencias = [
   { frecuencia: 20000, vol: 0 },
 ];
 
+// Función para crear el módulo BBE Low Contour
+function createBBELowNode(ctx, inputNode, options = {}) {
+  const lowContourGain = options.lowContourGain || 0;
+  const bassBoostGain = options.bassBoostGain || 0;
+  const isEnabled = options.enabled !== undefined ? options.enabled : true;
+  const frequency = 80; // Hz
+
+  // Crear nodos internos
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = frequency;
+  filter.Q.value = 0.707;
+
+  const lowContourGainNode = ctx.createGain();
+  // Al ser paralelo, sumamos el efecto al original
+  lowContourGainNode.gain.value = isEnabled
+    ? Math.pow(10, lowContourGain / 20) - 1
+    : 0;
+
+  const merger = ctx.createGain(); // Sumador final del módulo
+
+  // Extra Bass Boost para tono más profundo
+  const bassBoostFilter = ctx.createBiquadFilter();
+  bassBoostFilter.type = "lowpass";
+  bassBoostFilter.frequency.value = 50; // Hz para profundidad sub
+  bassBoostFilter.Q.value = 0.707;
+
+  const bassBoostGainNode = ctx.createGain();
+  bassBoostGainNode.gain.value = isEnabled
+    ? Math.pow(10, bassBoostGain / 20) - 1
+    : 0;
+
+  const delay = ctx.createDelay(0.1);
+  delay.delayTime.value = 0.001; // 1ms
+
+  // Arquitectura:
+  // input -> dry path -> merger
+  // input -> filter -> lowContourGainNode -> merger
+  // input -> bassBoostFilter -> bassBoostGainNode -> merger
+  // merger -> delay
+  inputNode.connect(merger);
+  inputNode.connect(filter);
+  filter.connect(lowContourGainNode);
+  lowContourGainNode.connect(merger);
+
+  inputNode.connect(bassBoostFilter);
+  bassBoostFilter.connect(bassBoostGainNode);
+  bassBoostGainNode.connect(merger);
+
+  merger.connect(delay);
+
+  return {
+    output: delay,
+    lowContourGainNode: lowContourGainNode,
+    bassBoostGainNode: bassBoostGainNode,
+  };
+}
+
+// Función para crear el módulo BBE Process (Claridad)
+function createBBEProcessNode(ctx, inputNode, options = {}) {
+  const processGain = options.processGain || 0;
+  const isEnabled = options.enabled !== undefined ? options.enabled : true;
+  const frequency = 4500; // Hz (entre 3kHz y 5kHz)
+
+  // Crear nodos internos
+  const filter = ctx.createBiquadFilter();
+  filter.type = "highpass";
+  filter.frequency.value = frequency;
+  filter.Q.value = 0.707;
+
+  const processGainNode = ctx.createGain();
+  // Convertir dB a ganancia lineal
+  processGainNode.gain.value = isEnabled
+    ? Math.pow(10, processGain / 20) - 1
+    : 0;
+
+  const merger = ctx.createGain(); // Sumador final del módulo
+
+  // Arquitectura:
+  // input -> dry path -> merger
+  // input -> filter -> processGainNode -> merger
+  inputNode.connect(merger);
+  inputNode.connect(filter);
+  filter.connect(processGainNode);
+  processGainNode.connect(merger);
+
+  return {
+    output: merger,
+    processGainNode: processGainNode,
+  };
+}
+
 // Función para crear filtros LR o Butterworth parametrizables
 function createFilter({
   type = "highpass", // "highpass" o "lowpass"
@@ -153,6 +245,97 @@ setTimeout(() => {
   const open = document.querySelector(".iconEq");
   const btnCerrar = document.querySelector("#btn-cerrar");
   const btnReset = document.querySelector("#btn-reset");
+
+  // BBE Controles UI
+  const inputBbeLowContour = document.getElementById("bbeLowContour");
+  const inputBbeBassBoost = document.getElementById("bbeBassBoost");
+  const inputBbeProcess = document.getElementById("bbeProcess");
+  const checkBbeLow = document.getElementById("enableBBELow");
+  const checkBbeProcess = document.getElementById("enableBBEProcess");
+
+  const verBbeLowContour = document.getElementById("verBbeLowContour");
+  const verBbeBassBoost = document.getElementById("verBbeBassBoost");
+  const verBbeProcess = document.getElementById("verBbeProcess");
+
+  // Inicialización de parámetros BBE
+  window.bbeParams = {
+    lowContour: parseFloat(localStorage.getItem("bbeLowContour")) || 4,
+    bassBoost: parseFloat(localStorage.getItem("bbeBassBoost")) || 4,
+    process: parseFloat(localStorage.getItem("bbeProcess")) || 3,
+    lowEnabled: localStorage.getItem("bbeLowEnabled") !== "false",
+    processEnabled: localStorage.getItem("bbeProcessEnabled") !== "false",
+  };
+
+  const updateBBEUI = () => {
+    inputBbeLowContour.value = window.bbeParams.lowContour;
+    inputBbeBassBoost.value = window.bbeParams.bassBoost;
+    inputBbeProcess.value = window.bbeParams.process;
+    checkBbeLow.checked = window.bbeParams.lowEnabled;
+    checkBbeProcess.checked = window.bbeParams.processEnabled;
+
+    verBbeLowContour.innerText = window.bbeParams.lowContour.toFixed(1);
+    verBbeBassBoost.innerText = window.bbeParams.bassBoost.toFixed(1);
+    verBbeProcess.innerText = window.bbeParams.process.toFixed(1);
+  };
+
+  updateBBEUI();
+
+  // Event Listeners para BBE
+  inputBbeLowContour.addEventListener("input", (e) => {
+    window.bbeParams.lowContour = parseFloat(e.target.value);
+    verBbeLowContour.innerText = window.bbeParams.lowContour.toFixed(1);
+    localStorage.setItem("bbeLowContour", window.bbeParams.lowContour);
+    if (window.bbeLowNode && window.bbeParams.lowEnabled) {
+      window.bbeLowNode.lowContourGainNode.gain.value =
+        Math.pow(10, window.bbeParams.lowContour / 20) - 1;
+    }
+  });
+
+  inputBbeBassBoost.addEventListener("input", (e) => {
+    window.bbeParams.bassBoost = parseFloat(e.target.value);
+    verBbeBassBoost.innerText = window.bbeParams.bassBoost.toFixed(1);
+    localStorage.setItem("bbeBassBoost", window.bbeParams.bassBoost);
+    if (window.bbeLowNode && window.bbeParams.lowEnabled) {
+      window.bbeLowNode.bassBoostGainNode.gain.value =
+        Math.pow(10, window.bbeParams.bassBoost / 20) - 1;
+    }
+  });
+
+  inputBbeProcess.addEventListener("input", (e) => {
+    window.bbeParams.process = parseFloat(e.target.value);
+    verBbeProcess.innerText = window.bbeParams.process.toFixed(1);
+    localStorage.setItem("bbeProcess", window.bbeParams.process);
+    if (window.bbeProcessNode && window.bbeParams.processEnabled) {
+      window.bbeProcessNode.processGainNode.gain.value =
+        Math.pow(10, window.bbeParams.process / 20) - 1;
+    }
+  });
+
+  checkBbeLow.addEventListener("change", (e) => {
+    window.bbeParams.lowEnabled = e.target.checked;
+    localStorage.setItem("bbeLowEnabled", window.bbeParams.lowEnabled);
+    if (window.bbeLowNode) {
+      const gLow = window.bbeParams.lowEnabled
+        ? Math.pow(10, window.bbeParams.lowContour / 20) - 1
+        : 0;
+      const gBass = window.bbeParams.lowEnabled
+        ? Math.pow(10, window.bbeParams.bassBoost / 20) - 1
+        : 0;
+      window.bbeLowNode.lowContourGainNode.gain.value = gLow;
+      window.bbeLowNode.bassBoostGainNode.gain.value = gBass;
+    }
+  });
+
+  checkBbeProcess.addEventListener("change", (e) => {
+    window.bbeParams.processEnabled = e.target.checked;
+    localStorage.setItem("bbeProcessEnabled", window.bbeParams.processEnabled);
+    if (window.bbeProcessNode) {
+      const g = window.bbeParams.processEnabled
+        ? Math.pow(10, window.bbeParams.process / 20) - 1
+        : 0;
+      window.bbeProcessNode.processGainNode.gain.value = g;
+    }
+  });
 
   // creamos la variable para guardar cada banda del ecualizador
   window.bands = [];
@@ -488,8 +671,22 @@ setTimeout(() => {
     splitter.connect(gainLow, 0);
     splitter.connect(gainHight, 1);
 
-    lowFilter.output.connect(merger, 0, 0);
-    hightFilter.output.connect(merger, 0, 1);
+    // Integración del módulo BBE Sonic Maximizer
+    // Aplicamos Low Contour y Bass Boost a la banda de bajos
+    window.bbeLowNode = createBBELowNode(ctx, lowFilter.output, {
+      lowContourGain: window.bbeParams.lowContour,
+      bassBoostGain: window.bbeParams.bassBoost,
+      enabled: window.bbeParams.lowEnabled,
+    });
+
+    // Aplicamos Process (realce de armónicos) a la banda de altos
+    window.bbeProcessNode = createBBEProcessNode(ctx, hightFilter.output, {
+      processGain: window.bbeParams.process,
+      enabled: window.bbeParams.processEnabled,
+    });
+
+    window.bbeLowNode.output.connect(merger, 0, 0);
+    window.bbeProcessNode.output.connect(merger, 0, 1);
 
     let lowCutFilter = Array(4)
       .fill()

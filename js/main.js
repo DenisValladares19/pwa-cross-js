@@ -37,19 +37,30 @@ function createBBELowNode(ctx, inputNode, options = {}) {
   const lowContourGain = options.lowContourGain || 0;
   const frequency = 80; // Hz
 
-  // Filtro Low Shelf para el refuerzo de graves
-  const lowShelf = ctx.createBiquadFilter();
-  lowShelf.type = "lowshelf";
-  lowShelf.frequency.value = frequency;
-  lowShelf.gain.value = lowContourGain;
+  // Crear nodos internos
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = frequency;
+  filter.Q.value = 0.707;
 
-  // Delay para compensación temporal (atrasar bajos 1ms)
+  const gain = ctx.createGain();
+  // Convertir dB a ganancia lineal (0.5 para +4dB aprox, según diseño)
+  // Nota: Al ser paralelo, sumamos el efecto al original
+  gain.gain.value = Math.pow(10, lowContourGain / 20) - 1;
+
+  const merger = ctx.createGain(); // Sumador final del módulo
   const delay = ctx.createDelay(0.1);
   delay.delayTime.value = 0.001; // 1ms
 
-  // Conexión: input -> lowShelf -> delay
-  inputNode.connect(lowShelf);
-  lowShelf.connect(delay);
+  // Arquitectura:
+  // input -> dry path -> merger
+  // input -> filter -> gain -> merger
+  // merger -> delay
+  inputNode.connect(merger);
+  inputNode.connect(filter);
+  filter.connect(gain);
+  gain.connect(merger);
+  merger.connect(delay);
 
   return delay;
 }
@@ -59,16 +70,27 @@ function createBBEProcessNode(ctx, inputNode, options = {}) {
   const processGain = options.processGain || 0;
   const frequency = 4500; // Hz (entre 3kHz y 5kHz)
 
-  // Filtro High Shelf para realce de armónicos
-  const highShelf = ctx.createBiquadFilter();
-  highShelf.type = "highshelf";
-  highShelf.frequency.value = frequency;
-  highShelf.gain.value = processGain;
+  // Crear nodos internos
+  const filter = ctx.createBiquadFilter();
+  filter.type = "highpass";
+  filter.frequency.value = frequency;
+  filter.Q.value = 0.707;
 
-  // Conexión: input -> highShelf
-  inputNode.connect(highShelf);
+  const gain = ctx.createGain();
+  // Convertir dB a ganancia lineal
+  gain.gain.value = Math.pow(10, processGain / 20) - 1;
 
-  return highShelf;
+  const merger = ctx.createGain(); // Sumador final del módulo
+
+  // Arquitectura:
+  // input -> dry path -> merger
+  // input -> filter -> gain -> merger
+  inputNode.connect(merger);
+  inputNode.connect(filter);
+  filter.connect(gain);
+  gain.connect(merger);
+
+  return merger;
 }
 
 // Función para crear filtros LR o Butterworth parametrizables

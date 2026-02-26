@@ -49,18 +49,26 @@ function createBBELowNode(ctx, inputNode, options = {}) {
   gain.gain.value = Math.pow(10, lowContourGain / 20) - 1;
 
   const merger = ctx.createGain(); // Sumador final del módulo
+
+  // Extra Bass Boost para tono más profundo
+  const bassBoost = ctx.createBiquadFilter();
+  bassBoost.type = "lowshelf";
+  bassBoost.frequency.value = 60; // Hz para profundidad sub
+  bassBoost.gain.value = 4; // +4dB de refuerzo extra
+
   const delay = ctx.createDelay(0.1);
   delay.delayTime.value = 0.001; // 1ms
 
   // Arquitectura:
   // input -> dry path -> merger
   // input -> filter -> gain -> merger
-  // merger -> delay
+  // merger -> bassBoost -> delay
   inputNode.connect(merger);
   inputNode.connect(filter);
   filter.connect(gain);
   gain.connect(merger);
-  merger.connect(delay);
+  merger.connect(bassBoost);
+  bassBoost.connect(delay);
 
   return delay;
 }

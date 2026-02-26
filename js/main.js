@@ -32,6 +32,45 @@ let frecuencias = [
   { frecuencia: 20000, vol: 0 },
 ];
 
+// Función para crear el módulo BBE Low Contour
+function createBBELowNode(ctx, inputNode, options = {}) {
+  const lowContourGain = options.lowContourGain || 0;
+  const frequency = 80; // Hz
+
+  // Filtro Low Shelf para el refuerzo de graves
+  const lowShelf = ctx.createBiquadFilter();
+  lowShelf.type = "lowshelf";
+  lowShelf.frequency.value = frequency;
+  lowShelf.gain.value = lowContourGain;
+
+  // Delay para compensación temporal (atrasar bajos 1ms)
+  const delay = ctx.createDelay(0.1);
+  delay.delayTime.value = 0.001; // 1ms
+
+  // Conexión: input -> lowShelf -> delay
+  inputNode.connect(lowShelf);
+  lowShelf.connect(delay);
+
+  return delay;
+}
+
+// Función para crear el módulo BBE Process (Claridad)
+function createBBEProcessNode(ctx, inputNode, options = {}) {
+  const processGain = options.processGain || 0;
+  const frequency = 4500; // Hz (entre 3kHz y 5kHz)
+
+  // Filtro High Shelf para realce de armónicos
+  const highShelf = ctx.createBiquadFilter();
+  highShelf.type = "highshelf";
+  highShelf.frequency.value = frequency;
+  highShelf.gain.value = processGain;
+
+  // Conexión: input -> highShelf
+  inputNode.connect(highShelf);
+
+  return highShelf;
+}
+
 // Función para crear filtros LR o Butterworth parametrizables
 function createFilter({
   type = "highpass", // "highpass" o "lowpass"
@@ -488,8 +527,19 @@ setTimeout(() => {
     splitter.connect(gainLow, 0);
     splitter.connect(gainHight, 1);
 
-    lowFilter.output.connect(merger, 0, 0);
-    hightFilter.output.connect(merger, 0, 1);
+    // Integración del módulo BBE Sonic Maximizer
+    // Aplicamos Low Contour y Delay a la banda de bajos
+    const bbeLow = createBBELowNode(ctx, lowFilter.output, {
+      lowContourGain: 4,
+    });
+
+    // Aplicamos Process (realce de armónicos) a la banda de altos
+    const bbeProcess = createBBEProcessNode(ctx, hightFilter.output, {
+      processGain: 3,
+    });
+
+    bbeLow.connect(merger, 0, 0);
+    bbeProcess.connect(merger, 0, 1);
 
     let lowCutFilter = Array(4)
       .fill()

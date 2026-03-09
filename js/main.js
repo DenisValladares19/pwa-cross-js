@@ -32,67 +32,6 @@ let frecuencias = [
   { frecuencia: 20000, vol: 0 },
 ];
 
-// Función para crear el módulo BBE Low Contour
-function createBBELowNode(ctx, inputNode, options = {}) {
-  const lowContourGain = options.lowContourGain || 0;
-  const frequency = 80; // Hz
-
-  // Crear nodos internos
-  const filter = ctx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = frequency;
-  filter.Q.value = 0.707;
-
-  const gain = ctx.createGain();
-  // Convertir dB a ganancia lineal (0.5 para +4dB aprox, según diseño)
-  // Nota: Al ser paralelo, sumamos el efecto al original
-  gain.gain.value = Math.pow(10, lowContourGain / 20) - 1;
-
-  const merger = ctx.createGain(); // Sumador final del módulo
-  const delay = ctx.createDelay(0.1);
-  delay.delayTime.value = 0.001; // 1ms
-
-  // Arquitectura:
-  // input -> dry path -> merger
-  // input -> filter -> gain -> merger
-  // merger -> delay
-  inputNode.connect(merger);
-  inputNode.connect(filter);
-  filter.connect(gain);
-  gain.connect(merger);
-  merger.connect(delay);
-
-  return delay;
-}
-
-// Función para crear el módulo BBE Process (Claridad)
-function createBBEProcessNode(ctx, inputNode, options = {}) {
-  const processGain = options.processGain || 0;
-  const frequency = 4500; // Hz (entre 3kHz y 5kHz)
-
-  // Crear nodos internos
-  const filter = ctx.createBiquadFilter();
-  filter.type = "highpass";
-  filter.frequency.value = frequency;
-  filter.Q.value = 0.707;
-
-  const gain = ctx.createGain();
-  // Convertir dB a ganancia lineal
-  gain.gain.value = Math.pow(10, processGain / 20) - 1;
-
-  const merger = ctx.createGain(); // Sumador final del módulo
-
-  // Arquitectura:
-  // input -> dry path -> merger
-  // input -> filter -> gain -> merger
-  inputNode.connect(merger);
-  inputNode.connect(filter);
-  filter.connect(gain);
-  gain.connect(merger);
-
-  return merger;
-}
-
 // Función para crear filtros LR o Butterworth parametrizables
 function createFilter({
   type = "highpass", // "highpass" o "lowpass"

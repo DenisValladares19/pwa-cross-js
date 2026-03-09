@@ -32,98 +32,6 @@ let frecuencias = [
   { frecuencia: 20000, vol: 0 },
 ];
 
-// Función para crear el módulo BBE Low Contour
-function createBBELowNode(ctx, inputNode, options = {}) {
-  const lowContourGain = options.lowContourGain || 0;
-  const bassBoostGain = options.bassBoostGain || 0;
-  const isEnabled = options.enabled !== undefined ? options.enabled : true;
-  const frequency = 80; // Hz
-
-  // Crear nodos internos
-  const filter = ctx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = frequency;
-  filter.Q.value = 0.707;
-
-  const lowContourGainNode = ctx.createGain();
-  // Al ser paralelo, sumamos el efecto al original
-  lowContourGainNode.gain.value = isEnabled
-    ? Math.pow(10, lowContourGain / 20) - 1
-    : 0;
-
-  const merger = ctx.createGain(); // Sumador final del módulo
-
-  // Extra Bass Boost para tono más profundo
-  const bassBoostFilter = ctx.createBiquadFilter();
-  bassBoostFilter.type = "lowpass";
-  bassBoostFilter.frequency.value = 60; // Hz para profundidad sub
-  bassBoostFilter.Q.value = 0.707;
-
-  const bassBoostGainNode = ctx.createGain();
-  bassBoostGainNode.gain.value = isEnabled
-    ? Math.pow(10, bassBoostGain / 20) - 1
-    : 0;
-
-  const delay = ctx.createDelay(0.1);
-  delay.delayTime.value = 0.001; // 1ms
-
-  // Arquitectura:
-  // input -> dry path -> merger
-  // input -> filter -> lowContourGainNode -> merger
-  // input -> bassBoostFilter -> bassBoostGainNode -> merger
-  // merger -> delay
-  inputNode.connect(merger);
-  inputNode.connect(filter);
-  filter.connect(lowContourGainNode);
-  lowContourGainNode.connect(merger);
-
-  inputNode.connect(bassBoostFilter);
-  bassBoostFilter.connect(bassBoostGainNode);
-  bassBoostGainNode.connect(merger);
-
-  merger.connect(delay);
-
-  return {
-    output: delay,
-    lowContourGainNode: lowContourGainNode,
-    bassBoostGainNode: bassBoostGainNode,
-  };
-}
-
-// Función para crear el módulo BBE Process (Claridad)
-function createBBEProcessNode(ctx, inputNode, options = {}) {
-  const processGain = options.processGain || 0;
-  const isEnabled = options.enabled !== undefined ? options.enabled : true;
-  const frequency = 4500; // Hz (entre 3kHz y 5kHz)
-
-  // Crear nodos internos
-  const filter = ctx.createBiquadFilter();
-  filter.type = "highpass";
-  filter.frequency.value = frequency;
-  filter.Q.value = 0.707;
-
-  const processGainNode = ctx.createGain();
-  // Convertir dB a ganancia lineal
-  processGainNode.gain.value = isEnabled
-    ? Math.pow(10, processGain / 20) - 1
-    : 0;
-
-  const merger = ctx.createGain(); // Sumador final del módulo
-
-  // Arquitectura:
-  // input -> dry path -> merger
-  // input -> filter -> processGainNode -> merger
-  inputNode.connect(merger);
-  inputNode.connect(filter);
-  filter.connect(processGainNode);
-  processGainNode.connect(merger);
-
-  return {
-    output: merger,
-    processGainNode: processGainNode,
-  };
-}
-
 // Función para crear filtros LR o Butterworth parametrizables
 function createFilter({
   type = "highpass", // "highpass" o "lowpass"
@@ -507,7 +415,7 @@ setTimeout(() => {
       mostrarFrecuenciaBaja.innerText = deleteDecimal(window.frecuenciaBaja);
       // window.lowPassFilter.frequency.value = window.frecuenciaBaja;
       lowFilter?.filters?.forEach(
-        (filter) => (filter.frequency.value = window.frecuenciaBaja)
+        (filter) => (filter.frequency.value = window.frecuenciaBaja),
       );
     } catch (error) {
       console.log(error);
@@ -521,7 +429,7 @@ setTimeout(() => {
       mostrarFrecuenciaAlta.innerText = deleteDecimal(window.frecuenciaAlta);
       // window.hightPassFilter.frequency.value = window.frecuenciaAlta;
       hightFilter?.filters?.forEach(
-        (filter) => (filter.frequency.value = window.frecuenciaAlta)
+        (filter) => (filter.frequency.value = window.frecuenciaAlta),
       );
     } catch (error) {
       console.log(error);
@@ -558,15 +466,14 @@ setTimeout(() => {
         let old = [...window.frecuencias];
         old[index].vol = e.target.value;
         window.frecuencias = [...old];
-        document.getElementById(
-          `span-vol-${index + 1}`
-        ).innerText = `Vol: ${deleteDecimal(window.frecuencias[index].vol, 2)}`;
+        document.getElementById(`span-vol-${index + 1}`).innerText =
+          `Vol: ${deleteDecimal(window.frecuencias[index].vol, 2)}`;
         window.bands[index]
           ? (window.bands[index].gain.value = e.target.value)
           : null;
         localStorage.setItem(
           `vol-frecuencia-${item.frecuencia}`,
-          e.target.value
+          e.target.value,
         );
       });
   });
@@ -671,22 +578,8 @@ setTimeout(() => {
     splitter.connect(gainLow, 0);
     splitter.connect(gainHight, 1);
 
-    // Integración del módulo BBE Sonic Maximizer
-    // Aplicamos Low Contour y Bass Boost a la banda de bajos
-    window.bbeLowNode = createBBELowNode(ctx, lowFilter.output, {
-      lowContourGain: window.bbeParams.lowContour,
-      bassBoostGain: window.bbeParams.bassBoost,
-      enabled: window.bbeParams.lowEnabled,
-    });
-
-    // Aplicamos Process (realce de armónicos) a la banda de altos
-    window.bbeProcessNode = createBBEProcessNode(ctx, hightFilter.output, {
-      processGain: window.bbeParams.process,
-      enabled: window.bbeParams.processEnabled,
-    });
-
-    window.bbeLowNode.output.connect(merger, 0, 0);
-    window.bbeProcessNode.output.connect(merger, 0, 1);
+    lowFilter.output.connect(merger, 0, 0);
+    hightFilter.output.connect(merger, 0, 1);
 
     let lowCutFilter = Array(4)
       .fill()

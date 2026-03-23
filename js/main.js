@@ -34,34 +34,55 @@ let frecuencias = [
 
 // Función para crear filtros LR o Butterworth parametrizables
 function createFilter({
-  type = "highpass", // "highpass" o "lowpass"
-  frequency = 1000, // Frecuencia de corte (Hz)
-  slope = 24, // Pendiente (24, 48 dB/octava)
-  filterType = "LR", // "LR" (Linkwitz-Riley) o "butterworth",
+  type = "highpass",
+  frequency = 1000,
+  slope = 24,
+  filterType = "LR",
   ctx,
 }) {
-  const stages = slope / 12; // Etapas necesarias (2 para 24 dB, 4 para 48 dB)
-  const filters = [];
+  const stages = slope / 12;
 
-  // Configurar Q según el tipo de filtro
-  const Q = filterType === "LR" ? 0.5 : 0.7071; // Q para LR o Butterworth
+  const Q_TABLES = {
+    LR: {
+      2: [0.5],
+      4: [0.7071, 0.7071],
+      8: [0.5412, 1.3066, 0.5412, 1.3066],
+    },
+    butterworth: {
+      2: [0.7071],
+      4: [0.5412, 1.3066],
+      8: [0.5098, 0.6013, 0.8999, 2.5629],
+    },
+  };
 
-  // Crear y configurar cada etapa
-  for (let i = 0; i < stages; i++) {
-    const filter = ctx.createBiquadFilter();
-    filter.type = type;
-    filter.frequency.value = frequency;
-    filter.Q.value = Q;
-    filters.push(filter);
+  const qValues = Q_TABLES[filterType]?.[stages];
+
+  if (!qValues) {
+    throw new Error(
+      `Combinación no soportada: filterType="${filterType}", slope=${slope} dB/oct`,
+    );
   }
 
-  // Conectar en serie
-  filters.reduce((prev, curr) => prev.connect(curr));
+  const filters = qValues.map((q) => {
+    const filter = ctx.createBiquadFilter();
+    filter.type = type;
+
+    // Scheduled en el tiempo actual — sin clicks
+    filter.frequency.setValueAtTime(frequency, ctx.currentTime);
+    filter.Q.setValueAtTime(q, ctx.currentTime);
+    filter.gain.setValueAtTime(0, ctx.currentTime);
+
+    return filter;
+  });
+
+  for (let i = 0; i < filters.length - 1; i++) {
+    filters[i].connect(filters[i + 1]);
+  }
 
   return {
     input: filters[0],
     output: filters[filters.length - 1],
-    filters: filters, // Opcional: acceso a cada etapa
+    filters,
   };
 }
 
@@ -490,15 +511,19 @@ setTimeout(() => {
     lowFilter.output.connect(merger, 0, 0);
     hightFilter.output.connect(merger, 0, 1);
 
-    let lowCutFilter = Array(4)
-      .fill()
-      .map(() => {
-        const lowCut = ctx.createBiquadFilter();
-        lowCut.type = "highpass";
-        lowCut.frequency.value = getLowCut();
-        lowCut.Q.value = 0.5;
-        return lowCut;
-      });
+    /**
+     * 4: [0.5412, 1.3066],
+     * 8: [0.5098, 0.6013, 0.8999, 2.5629],
+     */
+    const Q_BUTTERWORTH_4TH = [0.5412, 1.3066];
+
+    let lowCutFilter = Q_BUTTERWORTH_4TH.map((q) => {
+      const lowCut = ctx.createBiquadFilter();
+      lowCut.type = "highpass";
+      lowCut.frequency.value = getLowCut();
+      lowCut.Q.value = q;
+      return lowCut;
+    });
 
     merger.connect(lowCutFilter[0]);
     lowCutFilter.forEach((filter, index) => {

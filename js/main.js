@@ -40,7 +40,7 @@ function createFilter({
   filterType = "LR",
   ctx,
 }) {
-  const stages = slope / 12;
+  const stages = slope / 6;
 
   const Q_TABLES = {
     LR: {
@@ -489,12 +489,12 @@ setTimeout(() => {
     mediaElement.connect(splitterRight);
 
     // uniendo los dos canales L y R en uno solo que sera R
-    splitterRight.connect(mergeRight, 0, 1);
-    splitterRight.connect(mergeRight, 0, 1);
+    splitterRight.connect(mergeRight, 1, 0);
+    splitterRight.connect(mergeRight, 1, 0);
 
     // uniendo los dos canales L y R en uno solo que sera L
-    splitterLeft.connect(mergeLeft, 1, 0);
-    splitterLeft.connect(mergeLeft, 1, 0);
+    splitterLeft.connect(mergeLeft, 0, 1);
+    splitterLeft.connect(mergeLeft, 0, 1);
 
     // Uniendo los canales L y R antes modificados y
     // dando un canal cada uno final

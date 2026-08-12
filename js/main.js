@@ -91,6 +91,39 @@ let hightFilter;
 
 let lowFilter;
 
+/**
+ * Curva sigmoide para WaveShaperNode (patrón MDN).
+ * drive 0–100: cuánta distorsión / armónicos generar.
+ */
+function makeHarmonicCurve(drive = 50, samples = 2048) {
+  const k = drive;
+  const curve = new Float32Array(samples);
+  const deg = Math.PI / 180;
+  for (let i = 0; i < samples; i++) {
+    const x = (i * 2) / samples - 1;
+    curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+  }
+  return curve;
+}
+
+/**
+ * Aplica el % de profundidad de graves a los nodos (si el grafo ya existe).
+ * Solo afecta la ruta de graves (gainLow); masterGain compensa el nivel total.
+ */
+function applyBassDepth(percent) {
+  const nodes = window.bassDepthNodes;
+  if (!nodes) return;
+
+  const wet = (percent / 100) * 0.7;
+  const drive = 20 + (percent / 100) * 60;
+  const master = 1 / (1 + wet * 0.35);
+  const t = nodes.ctx.currentTime;
+
+  nodes.enhancerMix.gain.setTargetAtTime(wet, t, 0.02);
+  nodes.masterGain.gain.setTargetAtTime(master, t, 0.02);
+  nodes.shaper.curve = makeHarmonicCurve(drive);
+}
+
 window.frecuencias = frecuencias.map((item) => {
   let oldObj = { ...item };
   let local = localStorage.getItem(`vol-frecuencia-${oldObj.frecuencia}`);
@@ -268,8 +301,8 @@ setTimeout(() => {
     window.gananciaBaja = localStorage.getItem("gananciaBaja");
     inputGananciaBaja.value = localStorage.getItem("gananciaBaja");
   } else {
-    gananciaBaja = 1;
-    inputFrecuenciaBaja.value = 1;
+    window.gananciaBaja = 1;
+    inputGananciaBaja.value = 1;
   }
 
   // Frecuencias Altas
@@ -408,17 +441,102 @@ setTimeout(() => {
       });
   });
 
+  // ------------------------------------------------------------------
+  // Profundidad de graves: mejora armónica (missing fundamental)
+  // ------------------------------------------------------------------
+  const depthSlider = document.getElementById("depthSlider");
+  const verProfundidad = document.getElementById("verProfundidad");
+  const btnDepthReset = document.getElementById("btn-depth-reset");
+
+  const loadDepthPercent = () => {
+    const saved = localStorage.getItem("profundidadGraves");
+    if (saved !== null && saved !== "" && !isNaN(Number(saved))) {
+      return Math.min(100, Math.max(0, Number(saved)));
+    }
+    return 30;
+  };
+
+  const refreshDepthUI = (percent) => {
+    depthSlider.value = percent;
+    verProfundidad.innerText = deleteDecimal(percent);
+  };
+
+  const setDepthPercent = (percent) => {
+    const value = Math.min(100, Math.max(0, Number(percent)));
+    window.profundidadGraves = value;
+    localStorage.setItem("profundidadGraves", String(value));
+    refreshDepthUI(value);
+    applyBassDepth(value);
+  };
+
+  setDepthPercent(loadDepthPercent());
+
+  depthSlider.addEventListener("input", (e) => {
+    setDepthPercent(e.target.value);
+  });
+
+  btnDepthReset.addEventListener("click", () => {
+    setDepthPercent(0);
+  });
+
   mostrarFrecuenciaAlta.innerText = deleteDecimal(window.frecuenciaAlta);
   mostrarFrecuenciaBaja.innerText = deleteDecimal(window.frecuenciaBaja);
   mostrarGananciaBaja.innerText = deleteDecimal(window.gananciaBaja, 2);
   mostrarGananciaAlta.innerText = deleteDecimal(window.gananciaAlta, 2);
 
   audioELement.addEventListener("play", () => {
+    // El grafo se construye una sola vez: createMediaElementSource() falla
+    // si se vuelve a llamar sobre el mismo elemento <audio>.
+    if (window.audioGraphBuilt) {
+      if (ctx.state === "suspended") ctx.resume();
+      return;
+    }
+    window.audioGraphBuilt = true;
+
     const Context = window.webkitAudioContext
       ? window.webkitAudioContext
       : window.AudioContext;
     ctx = new Context();
+    // Un AudioContext creado en estado "suspended" traga todo el audio.
+    if (ctx.state === "suspended") ctx.resume();
     const mediaElement = ctx.createMediaElementSource(audioELement);
+
+    // Nodos de profundidad (se cablean solo en la ruta de graves)
+    const bassBandFilter = ctx.createBiquadFilter();
+    bassBandFilter.type = "lowpass";
+    bassBandFilter.frequency.value = 80;
+    bassBandFilter.Q.value = Math.SQRT1_2;
+
+    const shaper = ctx.createWaveShaper();
+    shaper.oversample = "4x";
+    shaper.curve = makeHarmonicCurve(20);
+
+    // Orden: techo LP 80 → piso HP 50 (banda 50–80 Hz)
+    const harmonicsLowpass = ctx.createBiquadFilter();
+    harmonicsLowpass.type = "lowpass";
+    harmonicsLowpass.frequency.value = 80;
+    harmonicsLowpass.Q.value = Math.SQRT1_2;
+
+    const harmonicsHighpass = ctx.createBiquadFilter();
+    harmonicsHighpass.type = "highpass";
+    harmonicsHighpass.frequency.value = 50;
+    harmonicsHighpass.Q.value = Math.SQRT1_2;
+
+    const enhancerMix = ctx.createGain();
+    enhancerMix.gain.value = 0;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = 1;
+
+    window.bassDepthNodes = {
+      ctx,
+      bassBandFilter,
+      shaper,
+      harmonicsLowpass,
+      harmonicsHighpass,
+      enhancerMix,
+      masterGain,
+    };
 
     window.frecuencias.forEach((item, index) => {
       window.bands[index] = ctx.createBiquadFilter();
@@ -465,8 +583,20 @@ setTimeout(() => {
     // unir los canales
     let merger = ctx.createChannelMerger(2);
 
+    // Dry: graves y agudos por separado
     gainLow.connect(lowFilter.input);
     gainHight.connect(hightFilter.input);
+
+    // Profundidad SOLO en graves (paralelo a lowFilter → merger ch0).
+    // Los agudos (gainHight / hightFilter) no reciben esta rama.
+    gainLow.connect(bassBandFilter);
+    bassBandFilter.connect(shaper);
+    shaper.connect(harmonicsLowpass);
+    harmonicsLowpass.connect(harmonicsHighpass);
+    harmonicsHighpass.connect(enhancerMix);
+    enhancerMix.connect(merger, 0, 0);
+
+    applyBassDepth(window.profundidadGraves ?? 30);
 
     for (i = 1; i < frecuencias.length; i++) {
       window.bands[i - 1].connect(window.bands[i]);
@@ -531,7 +661,9 @@ setTimeout(() => {
         filter.connect(lowCutFilter[index + 1]);
       }
     });
-    lowCutFilter[lowCutFilter.length - 1].connect(ctx.destination);
+    // Salida final (la profundidad ya entró solo en merger ch0 = graves)
+    lowCutFilter[lowCutFilter.length - 1].connect(masterGain);
+    masterGain.connect(ctx.destination);
   });
 }, 1000);
 

@@ -89,6 +89,33 @@
           <br />
           <fieldset>
             <legend align="center" style="padding: 0 10px">
+              Profundidad de graves
+            </legend>
+            <div style="padding: 15px" class="bass-depth">
+              <label for="depthSlider"
+                >Profundidad (<span id="verProfundidad"></span> %)</label
+              >
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                id="depthSlider"
+              />
+              <p class="depth-note">
+                Genera armónicos de la banda grave (fundamental ausente) para
+                percibir un bajo más profundo. Empieza sutil; no sustituye la
+                ganancia de bajas frecuencias.
+              </p>
+              <button class="reset depth-reset" id="btn-depth-reset">
+                Reset profundidad
+              </button>
+            </div>
+          </fieldset>
+
+          <br />
+          <fieldset>
+            <legend align="center" style="padding: 0 10px">
               Listado de canciones
             </legend>
             <div

@@ -261,6 +261,22 @@ legend {
   padding: 5px;
 }
 
+.bass-depth .depth-note {
+  margin: 10px 0 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+.bass-depth .depth-reset {
+  margin-top: 8px;
+  width: auto;
+  min-width: 150px;
+  height: auto;
+  padding: 12px 24px;
+  line-height: 1.2;
+}
+
 @media screen and (max-width: 730px) {
   .card {
     width: 65%;

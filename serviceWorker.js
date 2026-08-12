@@ -1,4 +1,4 @@
-const CACHE_NAME = "cross-js-v2";
+const CACHE_NAME = "cross-js-v3";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",

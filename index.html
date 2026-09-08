@@ -29,6 +29,40 @@
           <br />
           <fieldset>
             <legend align="center" style="padding: 0 10px">
+              Refuerzo de Graves
+            </legend>
+            <div style="padding: 15px">
+              <label class="bb-toggle" for="bbEnabled">
+                <input type="checkbox" id="bbEnabled" />
+                <span>Activar</span>
+                <div class="bb-meter"><div id="bbMeter"></div></div>
+              </label>
+              <label for="bbTune"
+                >Frecuencia (<span id="verBbTune"></span> Hz)</label
+              >
+              <input type="range" min="50" max="190" step="1" id="bbTune" />
+              <label for="bbDrive"
+                >Drive (<span id="verBbDrive"></span> dB)</label
+              >
+              <input type="range" min="0" max="24" step="0.1" id="bbDrive" />
+              <label for="bbMix">Mezcla (<span id="verBbMix"></span> %)</label>
+              <input type="range" min="0" max="100" step="1" id="bbMix" />
+              <label for="bbHarmonics"
+                >Arm&oacute;nicos (<span id="verBbHarmonics"></span> %)</label
+              >
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                id="bbHarmonics"
+              />
+            </div>
+          </fieldset>
+
+          <br />
+          <fieldset>
+            <legend align="center" style="padding: 0 10px">
               Bajas Frecuencias
             </legend>
             <div style="padding: 15px">
@@ -129,6 +163,7 @@
       </div>
     </div>
     <!-- END CUSTOM MODAL -->
+    <script src="./js/bigbottom.js"></script>
     <script src="./js/main.js"></script>
   </body>
 </html>

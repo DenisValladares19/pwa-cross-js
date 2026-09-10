@@ -16,6 +16,14 @@ const BB_SMOOTH = 0.005; // constante de tiempo del suavizado de parametros
 const BB_MIX_MAX = 0.3; // tope del blend: a fondo el pico sube <2 dB
 const BB_HARM_MAX = 0.35;
 const BB_CURVE_SIZE = 8192;
+// Suelo de la ventana de entrada al generador de armonicos. Deliberadamente
+// por debajo del low-cut de salida: el contenido de 25-40 Hz no llega a los
+// altavoces, pero su 2o y 3er armonico si, y ahi es donde se vuelve audible.
+// Medido con fundamental sola, tras el low-cut de 41 Hz: bajar este suelo de
+// 40 a 25 sube el 2o armonico +16.4 dB para una nota de 25 Hz y +7.0 dB para
+// una de 32. Por debajo de 25 Hz ya no hay musica, solo retumbe y ruido de
+// micro, y deformar ruido reparte ruido por toda la banda de graves.
+const BB_HARM_FLOOR = 25;
 // Nivel de entrada al distorsionador. Medido: por encima de ~0.6 la senal
 // alcanza los extremos de la curva, el tanh de redondeo entra en juego y
 // aparecen 4o, 5o, 7o y 8o armonicos - eso es lo que se oye como saturacion.
@@ -156,7 +164,7 @@ function createBigBottom(ctx, opts = {}) {
 
   const harmSub = ctx.createBiquadFilter();
   harmSub.type = "highpass";
-  harmSub.frequency.setValueAtTime(40, ctx.currentTime);
+  harmSub.frequency.setValueAtTime(BB_HARM_FLOOR, ctx.currentTime);
   harmSub.Q.setValueAtTime(Math.SQRT1_2, ctx.currentTime);
 
   // Sin nivelador a proposito: uno delante de la curva atenua los pasajes

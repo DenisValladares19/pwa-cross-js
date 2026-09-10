@@ -1,9 +1,11 @@
-const CACHE_NAME = "cross-js-v2";
+const CACHE_NAME = "cross-js-v3";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
   "/css/style.css",
   "/js/main.js",
+  "/js/bigbottom.js",
+  "/js/worklets/opto-compressor.js",
   "/img/icon.ico",
   "/img/icon.svg",
   "/img/icon.png",

@@ -408,17 +408,98 @@ setTimeout(() => {
       });
   });
 
+  // --- Refuerzo de graves (compresion paralela + armonicos opcionales) ---
+  const inputBbEnabled = document.getElementById("bbEnabled");
+  const inputBbTune = document.getElementById("bbTune");
+  const inputBbDrive = document.getElementById("bbDrive");
+  const inputBbMix = document.getElementById("bbMix");
+  const inputBbHarmonics = document.getElementById("bbHarmonics");
+  const mostrarBbTune = document.getElementById("verBbTune");
+  const mostrarBbDrive = document.getElementById("verBbDrive");
+  const mostrarBbMix = document.getElementById("verBbMix");
+  const mostrarBbHarmonics = document.getElementById("verBbHarmonics");
+  const bbMeter = document.getElementById("bbMeter");
+
+  const BB_DEFAULTS = { bbTune: 80, bbDrive: 6, bbMix: 70, bbHarmonics: 0 };
+
+  Object.keys(BB_DEFAULTS).forEach((key) => {
+    const stored = localStorage.getItem(key);
+    window[key] = stored !== null && stored !== "" ? stored : BB_DEFAULTS[key];
+  });
+  window.bbEnabled = localStorage.getItem("bbEnabled") === "1";
+
+  inputBbEnabled.checked = window.bbEnabled;
+  inputBbTune.value = window.bbTune;
+  inputBbDrive.value = window.bbDrive;
+  inputBbMix.value = window.bbMix;
+  inputBbHarmonics.value = window.bbHarmonics;
+
+  mostrarBbTune.innerText = deleteDecimal(window.bbTune);
+  mostrarBbDrive.innerText = deleteDecimal(window.bbDrive, 1);
+  mostrarBbMix.innerText = deleteDecimal(window.bbMix);
+  mostrarBbHarmonics.innerText = deleteDecimal(window.bbHarmonics);
+
+  /** Pinta la reduccion de ganancia que reporta el worklet (0-12 dB). */
+  const renderBbMeter = (gr) => {
+    const pct = Math.min(gr / 12, 1) * 100;
+    bbMeter.style.width = `${pct}%`;
+    bbMeter.classList.toggle("hot", gr > 3);
+  };
+
+  // "input" y no "change": el efecto se juzga de oido mientras se mueve el
+  // mando, y los setters ya suavizan con setTargetAtTime.
+  inputBbEnabled.addEventListener("change", (e) => {
+    window.bbEnabled = e.target.checked;
+    localStorage.setItem("bbEnabled", window.bbEnabled ? "1" : "0");
+    window.bigBottom?.setEnabled(window.bbEnabled);
+    if (!window.bbEnabled) renderBbMeter(0);
+  });
+
+  inputBbTune.addEventListener("input", (e) => {
+    window.bbTune = e.target.value;
+    localStorage.setItem("bbTune", window.bbTune);
+    mostrarBbTune.innerText = deleteDecimal(window.bbTune);
+    window.bigBottom?.setTune(window.bbTune);
+  });
+
+  inputBbDrive.addEventListener("input", (e) => {
+    window.bbDrive = e.target.value;
+    localStorage.setItem("bbDrive", window.bbDrive);
+    mostrarBbDrive.innerText = deleteDecimal(window.bbDrive, 1);
+    window.bigBottom?.setDrive(window.bbDrive);
+  });
+
+  inputBbMix.addEventListener("input", (e) => {
+    window.bbMix = e.target.value;
+    localStorage.setItem("bbMix", window.bbMix);
+    mostrarBbMix.innerText = deleteDecimal(window.bbMix);
+    window.bigBottom?.setMix(window.bbMix);
+  });
+
+  inputBbHarmonics.addEventListener("input", (e) => {
+    window.bbHarmonics = e.target.value;
+    localStorage.setItem("bbHarmonics", window.bbHarmonics);
+    mostrarBbHarmonics.innerText = deleteDecimal(window.bbHarmonics);
+    window.bigBottom?.setHarmonics(window.bbHarmonics);
+  });
+
   mostrarFrecuenciaAlta.innerText = deleteDecimal(window.frecuenciaAlta);
   mostrarFrecuenciaBaja.innerText = deleteDecimal(window.frecuenciaBaja);
   mostrarGananciaBaja.innerText = deleteDecimal(window.gananciaBaja, 2);
   mostrarGananciaAlta.innerText = deleteDecimal(window.gananciaAlta, 2);
 
-  audioELement.addEventListener("play", () => {
-    const Context = window.webkitAudioContext
-      ? window.webkitAudioContext
-      : window.AudioContext;
-    ctx = new Context();
-    const mediaElement = ctx.createMediaElementSource(audioELement);
+  const Context = window.webkitAudioContext
+    ? window.webkitAudioContext
+    : window.AudioContext;
+
+  // El contexto se crea ya, no en el "play": nace suspendido hasta el primer
+  // gesto del usuario y asi el modulo del worklet tiene tiempo de cargar.
+  ctx = new Context();
+
+  // createMediaElementSource solo admite una llamada por <audio>.
+  const mediaElement = ctx.createMediaElementSource(audioELement);
+
+  const buildAudioGraph = () => {
 
     window.frecuencias.forEach((item, index) => {
       window.bands[index] = ctx.createBiquadFilter();
@@ -484,9 +565,21 @@ setTimeout(() => {
     // merge une los dos canales ya en mono
     const merge = ctx.createChannelMerger(2);
 
+    // Refuerzo de graves al inicio de la cadena: todo lo que sigue
+    // (mono-izacion, EQ, crossover, low-cut) parte de su salida.
+    window.bigBottom = createBigBottom(ctx, {
+      tune: Number(window.bbTune),
+      drive: Number(window.bbDrive),
+      mix: Number(window.bbMix),
+      harmonics: Number(window.bbHarmonics),
+      enabled: window.bbEnabled,
+    });
+    window.bigBottom.onMeter(renderBbMeter);
+    mediaElement.connect(window.bigBottom.input);
+
     // se conecta los dos separadores de canales al source
-    mediaElement.connect(splitterLeft);
-    mediaElement.connect(splitterRight);
+    window.bigBottom.output.connect(splitterLeft);
+    window.bigBottom.output.connect(splitterRight);
 
     // uniendo los dos canales L y R en uno solo que sera R
     splitterRight.connect(mergeRight, 1, 0);
@@ -532,6 +625,20 @@ setTimeout(() => {
       }
     });
     lowCutFilter[lowCutFilter.length - 1].connect(ctx.destination);
+  };
+
+  // El grafo se arma una sola vez, cuando el worklet esta registrado. Hacerlo
+  // dentro del handler de "play" con un await dejaba el primer play a medias:
+  // el modulo cargaba tarde, el nodo nunca se creaba y activar o desactivar el
+  // refuerzo no cambiaba nada porque no habia grafo que tocar.
+  loadBigBottomWorklet(ctx)
+    .catch((error) => {
+      console.log("no se pudo cargar el worklet de refuerzo de graves", error);
+    })
+    .then(buildAudioGraph);
+
+  audioELement.addEventListener("play", () => {
+    if (ctx.state === "suspended") ctx.resume();
   });
 }, 1000);
 
